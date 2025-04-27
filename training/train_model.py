@@ -17,6 +17,7 @@ class TrainModel:
         num_classes,
         scheduler,
         early_stopping_patience,
+        update_callback = None
     ):
 
         self.model = model.to(device)
@@ -31,6 +32,7 @@ class TrainModel:
         self.early_stopping_patience = early_stopping_patience
         self.best_test_acc = 0.0
         self.epochs_without_improvement = 0
+        self.update_callback = update_callback
 
         
     def _get_default_loss_fn(self, num_classes: int) -> nn.Module:
@@ -189,6 +191,14 @@ class TrainModel:
                 ("train_acc", round(train_acc, 2)),
                 ("test_acc", round(test_acc, 2)),
             ])
+            if self.update_callback:  
+                self.update_callback({
+                    'epoch': epoch + 1,
+                    'total_epochs': self.epochs,
+                    'loss': avg_train_loss,  # From training
+                    'train_acc': train_acc,   # Calculated metrics
+                    'test_acc': test_acc      # From evaluation
+                })
             
             #----------// Lr scheduler //-----------------#
             if self.scheduler is not None:
@@ -199,4 +209,4 @@ class TrainModel:
                 print(f"\nEarly stopping at epoch {epoch + 1} as test accuracy didn't improve for {self.early_stopping_patience} epochs.")
                 break
         
-        return train_losses, train_accuracies, train_f1s, test_losses, test_accuracies, test_f1s
+        return  train_losses, train_accuracies, test_losses, test_accuracies

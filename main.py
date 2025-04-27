@@ -18,7 +18,8 @@ def setup_device():
     return device
 
 
-def main(root, epoch):
+# def main(root, epoch):
+def main(root: str, epoch: int, lr: Optional[float] = None, weight_decay: Optional[float] = None, update_callback = None, **kwargs):
     try:
         # 1. Setup
         device = setup_device()
@@ -38,8 +39,19 @@ def main(root, epoch):
         print("\nInitializing model...")
         input_shape = X.shape
         # model = Model(input_size=input_shape, class_idx = class_idx).to(device)
-        model = ModelV(input_size = input_shape, class_idx = class_idx, conv_chanels= [16, 32, 64],
-                        fc_channels = [128, 256, 512], pool = 'max').to(device)
+        model_config = kwargs.get('model_config', {
+                'conv_channels': [16, 32, 64],
+                'fc_channels': [128, 256, 512],
+                'pool_type': 'max'
+            })
+    
+        model = ModelV(
+            input_size=input_shape,
+            class_idx=class_idx,
+            conv_chanels=model_config['conv_channels'],
+            fc_channels=model_config['fc_channels'],
+            pool=model_config['pool_type']
+        ).to(device)
         
         print(model.num_classes, model.output)
         print(f"Model architecture:\n{model}")
@@ -64,23 +76,15 @@ def main(root, epoch):
             test_loader = test_loader,
             early_stopping_patience = 3,
             scheduler= scheduler,
-            num_classes = model.num_classes  
+            num_classes = model.num_classes ,
+            update_callback = update_callback
         )
 
         #----------------// Training //-------------------#
         print("\nStarting training...")
-        trainer.train_model()
-
-        print("\nTraining completed successfully!")
+        return trainer.train_model()        
 
     except Exception as e:
         print(f"\nError occurred: {str(e)}")
         raise
-
-
-if __name__ ==  "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--root', type = str, default= 'archive')
-    parser.add_argument('--epoch', type= int, default= 10)
-    args = parser.parse_args()
-    main(root = args.root, epoch = args.epoch)
+    
